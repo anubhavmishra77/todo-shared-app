@@ -1,0 +1,10 @@
+.dart_tool/
+.idea/
+build/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.vscode/
+.DS_Store
+lib/firebase_options.dart
