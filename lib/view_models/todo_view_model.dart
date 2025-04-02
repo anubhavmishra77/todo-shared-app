@@ -60,10 +60,21 @@ class TodoViewModel extends ChangeNotifier {
         lastModifiedBy: {},
       );
 
+      // Add to local state immediately for better UX
+      final newTodo = todo.copyWith(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
+      );
+      _todos.insert(0, newTodo); // Add to the beginning of the list
+      notifyListeners();
+
       await _firebaseService.addTodo(todo);
       _error = '';
     } catch (e) {
+      // If adding fails, remove from local state
+      _todos.removeWhere(
+          (t) => t.id == DateTime.now().millisecondsSinceEpoch.toString());
       _error = e.toString();
+      rethrow; // Rethrow to let the UI handle the error
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -90,10 +101,18 @@ class TodoViewModel extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      // Remove the todo from local state immediately for better UX
+      _todos.removeWhere((todo) => todo.id == todoId);
+      _sharedTodos.removeWhere((todo) => todo.id == todoId);
+      notifyListeners();
+
       await _firebaseService.deleteTodo(todoId);
       _error = '';
     } catch (e) {
+      // If deletion fails, reload todos to ensure consistency
+      _loadTodos();
       _error = e.toString();
+      rethrow; // Rethrow to let the UI handle the error
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -11,11 +11,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: const FirebaseOptions(
-      apiKey: 'AIzaSyCFigjM5TtVzdspeElaiQT8t2iMVj_HAj4',
-      appId: '1:257737311538:android:7eb0608ce9f59458f3432b',
+      apiKey: 'AIzaSyAFM0JvxKQ_5oOjHYVY7tUV7z_7o2uR1oM',
+      appId: '1:257737311538:ios:146107da0b656427f3432b',
       messagingSenderId: '257737311538',
       projectId: 'todo-shared-app',
-      storageBucket: 'todo-shared-app.appspot.com',
+      storageBucket: 'todo-shared-app.firebasestorage.app',
+      iosBundleId: 'com.example.todoSharedApp',
     ),
   );
   runApp(const MyApp());

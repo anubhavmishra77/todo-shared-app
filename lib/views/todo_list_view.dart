@@ -74,13 +74,68 @@ class _TodoListViewState extends State<TodoListView> {
     }
   }
 
+  Future<void> _handleDelete(TodoItem todo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Todo'),
+        content: const Text('Are you sure you want to delete this todo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await context.read<TodoViewModel>().deleteTodo(todo.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Todo deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete todo: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(context);
+    final userEmail = firebaseService.currentUser?.email ?? '';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shared Todo App'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(
+              child: Text(
+                userEmail,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
           IconButton(
             icon: Icon(_showAddTodo ? Icons.close : Icons.add),
             onPressed: () => setState(() => _showAddTodo = !_showAddTodo),
@@ -97,6 +152,13 @@ class _TodoListViewState extends State<TodoListView> {
           if (viewModel.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          // Combine owned and shared todos
+          final allTodos = [
+            ...viewModel.todos.map((todo) => todo.copyWith(isOwned: true)),
+            ...viewModel.sharedTodos
+                .map((todo) => todo.copyWith(isOwned: false)),
+          ];
 
           return Column(
             children: [
@@ -127,15 +189,35 @@ class _TodoListViewState extends State<TodoListView> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_formKey.currentState!.validate()) {
-                              viewModel.addTodo(
-                                _titleController.text,
-                                _descriptionController.text,
-                              );
-                              _titleController.clear();
-                              _descriptionController.clear();
-                              setState(() => _showAddTodo = false);
+                              try {
+                                await viewModel.addTodo(
+                                  _titleController.text,
+                                  _descriptionController.text,
+                                );
+                                _titleController.clear();
+                                _descriptionController.clear();
+                                setState(() => _showAddTodo = false);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Todo added successfully'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Failed to add todo: ${e.toString()}'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
                             }
                           },
                           child: const Text('Add Todo'),
@@ -145,27 +227,7 @@ class _TodoListViewState extends State<TodoListView> {
                   ),
                 ),
               Expanded(
-                child: DefaultTabController(
-                  length: 2,
-                  child: Column(
-                    children: [
-                      const TabBar(
-                        tabs: [
-                          Tab(text: 'My Todos'),
-                          Tab(text: 'Shared With Me'),
-                        ],
-                      ),
-                      Expanded(
-                        child: TabBarView(
-                          children: [
-                            _buildTodoList(viewModel.todos),
-                            _buildTodoList(viewModel.sharedTodos),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _buildTodoList(allTodos),
               ),
             ],
           );
@@ -187,11 +249,11 @@ class _TodoListViewState extends State<TodoListView> {
         final todo = todos[index];
         return TodoItemWidget(
           todo: todo,
-          onDelete: () => context.read<TodoViewModel>().deleteTodo(todo.id),
+          onDelete: todo.isOwned ? () => _handleDelete(todo) : null,
           onToggleComplete: (value) => context.read<TodoViewModel>().updateTodo(
                 todo.copyWith(isCompleted: value),
               ),
-          onShare: () => _showShareDialog(todo),
+          onShare: todo.isOwned ? () => _showShareDialog(todo) : null,
         );
       },
     );

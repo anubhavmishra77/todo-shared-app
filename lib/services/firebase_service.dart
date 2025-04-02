@@ -76,7 +76,17 @@ class FirebaseService {
     if (currentUser == null) throw Exception('User not authenticated');
 
     final todoData = todo.toMap();
+    todoData['ownerId'] = currentUser!.uid;
     todoData['ownerEmail'] = currentUser!.email;
+    todoData['createdAt'] = FieldValue.serverTimestamp();
+    todoData['sharedWith'] = [];
+    todoData['lastModifiedBy'] = {
+      'userId': currentUser!.uid,
+      'email': currentUser!.email,
+      'timestamp': FieldValue.serverTimestamp(),
+      'action': 'created',
+    };
+
     await _firestore.collection('todos').add(todoData);
   }
 

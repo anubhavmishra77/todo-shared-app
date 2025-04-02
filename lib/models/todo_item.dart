@@ -10,6 +10,7 @@ class TodoItem {
   final List<String> sharedWith;
   final Map<String, dynamic> lastModifiedBy;
   final String ownerEmail;
+  final bool isOwned;
 
   TodoItem({
     required this.id,
@@ -21,6 +22,7 @@ class TodoItem {
     required this.sharedWith,
     required this.lastModifiedBy,
     required this.ownerEmail,
+    this.isOwned = true,
   });
 
   factory TodoItem.fromFirestore(DocumentSnapshot doc) {
@@ -35,6 +37,7 @@ class TodoItem {
       ownerEmail: data['ownerEmail'] ?? '',
       sharedWith: List<String>.from(data['sharedWith'] ?? []),
       lastModifiedBy: Map<String, dynamic>.from(data['lastModifiedBy'] ?? {}),
+      isOwned: true, // Default to true for Firestore documents
     );
   }
 
@@ -52,14 +55,16 @@ class TodoItem {
   }
 
   TodoItem copyWith({
+    String? id,
     String? title,
     String? description,
     bool? isCompleted,
     List<String>? sharedWith,
     Map<String, dynamic>? lastModifiedBy,
+    bool? isOwned,
   }) {
     return TodoItem(
-      id: this.id,
+      id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
       isCompleted: isCompleted ?? this.isCompleted,
@@ -68,6 +73,7 @@ class TodoItem {
       ownerEmail: this.ownerEmail,
       sharedWith: sharedWith ?? this.sharedWith,
       lastModifiedBy: lastModifiedBy ?? this.lastModifiedBy,
+      isOwned: isOwned ?? this.isOwned,
     );
   }
 }
